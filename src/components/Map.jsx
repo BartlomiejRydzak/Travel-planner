@@ -70,9 +70,6 @@ export default function MapChart(props) {
           ))
         }
       </Geographies>
-      {/* <Marker coordinates={[-74.006, 40.7128]}>
-        <circle r={4} fill="blue" />
-      </Marker> */}
       </ZoomableGroup>
     </ComposableMap>
   )
