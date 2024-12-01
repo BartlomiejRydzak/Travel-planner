@@ -31,12 +31,6 @@ app.get("/people", async (req, res) => {
     res.status(200).json({people: result.rows});
 })
 
-// app.get("/user", async (req, res) => {
-//     const result = await db.query("SELECT user_id FROM users");
-//     res.status(200).json({people: result.rows});
-// })
-
-
 app.post("/countries", async (req, res) => {
     const {country, id} = req.body;
     await db.query("INSERT INTO countries (been, person_id) VALUES ($1, $2)", [country, id]);
