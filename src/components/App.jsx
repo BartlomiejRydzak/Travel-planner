@@ -14,22 +14,6 @@ function App() {
     const [people, setPeople] = useState([]);
     const [person_id, setId] = useState();
     const [showForm, setShowForm] = useState(false);
-    // const [user_id, setUser] = useState();
-
-    // useEffect(() => {
-    //     const getPeople = async() => {
-    //         try {
-    //             const result = await axios.get(URL + "/user");
-    //             // setPeople(result.data.people)
-    //             // setId(result.data.people[0].person_id)
-    //             console.log("id",result.data)
-    //         } catch (error) {
-    //             console.log("Error fetching people:", error);
-    //         }
-    //     };
-        
-    //     getPeople();
-    // }, []);
 
     useEffect(() => {
         const getPeople = async() => {
@@ -45,7 +29,6 @@ function App() {
         
         getPeople();
     }, []);
-
 
     useEffect(() => {
 
