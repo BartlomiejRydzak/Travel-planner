@@ -1,25 +1,44 @@
-create table users(
-	user_id SERIAL PRIMARY KEY,
-	email VARCHAR(50) NOT NULL UNIQUE,
-	pass varchar(150) NOT NULL
+CREATE TABLE pol.osoby (
+    osoba_id SERIAL PRIMARY KEY,
+    imie VARCHAR(50) NOT NULL
 );
 
-create table people(
-	person_id SERIAL PRIMARY KEY,
-	name VARCHAR(50) NOT NULL,
-	user_id int REFERENCES users(user_id) 
+CREATE TABLE pol.kraje (
+    kraj_id SERIAL PRIMARY KEY,
+    nazwa VARCHAR(100) UNIQUE
 );
 
-create table countries(
-    country_id SERIAL PRIMARY KEY,
-    been varchar(100),
-    want varchar(100),
-    person_id int REFERENCES people(person_id) ON DELETE CASCADE
-)
+CREATE TABLE pol.osoby_kraje (
+    osoby_kraje_id SERIAL PRIMARY KEY,
+    osoba_id INT REFERENCES pol.osoby(osoba_id) ON DELETE CASCADE,
+    kraj_id INT REFERENCES pol.kraje(kraj_id) ON DELETE CASCADE
+);
 
-create table cities(
-    city_id SERIAL PRIMARY KEY,
-    been varchar(100),
-    want varchar(100),
-    person_id int REFERENCES people(person_id) ON DELETE CASCADE
-)
+CREATE TABLE pol.osoby_chca_kraje (
+    osoby_chca_kraje_id SERIAL PRIMARY KEY,
+    osoba_id INT REFERENCES pol.osoby(osoba_id) ON DELETE CASCADE,
+    kraj_id INT REFERENCES pol.kraje(kraj_id) ON DELETE CASCADE
+);
+
+-- Widok liczby odwiedzonych krajów
+CREATE VIEW pol.widok_odwiedzonych_krajow AS
+SELECT 
+    o.imie AS osoba,
+    COUNT(ok.kraj_id) AS liczba_odwiedzonych_krajow
+FROM  
+    pol.osoby o
+LEFT JOIN 
+    pol.osoby_kraje ok ON o.osoba_id = ok.osoba_id
+GROUP BY 
+    o.imie;
+
+CREATE VIEW pol.widok_krajow_i_liczba_osob AS
+SELECT 
+    k.nazwa AS kraj,
+    COUNT(ok.osoba_id) AS liczba_osob
+FROM 
+    pol.kraje k
+LEFT JOIN 
+    pol.osoby_chca_kraje ok ON k.kraj_id = ok.kraj_id
+GROUP BY 
+    k.nazwa;

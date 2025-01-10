@@ -1,80 +1,85 @@
 import React, { useEffect, useState } from 'react';
-import MapChart from './Map.jsx';
+import Mapa from './Map.jsx';
 import axios from "axios";
-import Person from "./Person.jsx"
+import Osoba from "./Person.jsx";
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import Fab from '@mui/material/Fab';
-import AddPerson from './AddPerson.jsx';
+import DodajOsobe from './AddPerson.jsx';
+import Raporty from './Reports.jsx';
 
-const URL = "http://localhost:5000";
+const URL = "http://localhost:5050";
 
-function App() {
-
-    const [countries, setCountries] = useState([]);
-    const [people, setPeople] = useState([]);
-    const [person_id, setId] = useState();
-    const [showForm, setShowForm] = useState(false);
+function Aplikacja() {
+    const [kraje, ustawKraje] = useState([]);
+    const [krajeDoPojechania, ustawKrajeDoPojechania] = useState([]);
+    const [osoby, ustawOsoby] = useState([]);
+    const [osobaId, ustawOsobaId] = useState();
+    const [pokazFormularz, ustawPokazFormularz] = useState(false);
 
     useEffect(() => {
-        const getPeople = async() => {
+        const pobierzOsoby = async () => {
             try {
-                const result = await axios.get(URL + "/people");
-                setPeople(result.data.people)
-                setId(result.data.people[0].person_id)
-                console.log("id",result.data.people[0].person_id)
-            } catch (error) {
-                console.log("Error fetching people:", error);
+                const wynik = await axios.get(URL + "/osoby");
+                ustawOsoby(wynik.data.osoby);
+                ustawOsobaId(wynik.data.osoby[0].osoba_id);
+            } catch (blad) {
+                console.log("Błąd podczas pobierania osób:", blad);
             }
         };
-        
-        getPeople();
+
+        pobierzOsoby();
     }, []);
 
     useEffect(() => {
-
-        const getCountries = async () => {
-            if(!person_id) return;
+        const pobierzKraje = async () => {
+            if (!osobaId) return;
             try {
-                const result = await axios.get(URL + "/countries", {
-                    params: {
-                        id: person_id,
-                    }
-                })
-                let tab = []
-                for(let i=0; i<result.data.countries.length; i++){
-                    tab.push(result.data.countries[i].been);
-                }
-                setCountries(tab);
-                } catch (error) {
-                console.error("Error fetching countries:", error);
+                const wynik = await axios.get(URL + "/kraje", { params: { id: osobaId } });
+                let listaKrajow = wynik.data.kraje.map(kraj => kraj.nazwa);
+                ustawKraje(listaKrajow);
+            } catch (blad) {
+                console.error("Błąd podczas pobierania krajów:", blad);
             }
-            };
-            getCountries();
+        };
 
-    }, [person_id])
+        const pobierzKrajeDoPojechania = async () => {
+            if (!osobaId) return;
+            try {
+                const wynik = await axios.get(URL + "/krajeDoPojechania", { params: { id: osobaId } });
+                let listaKrajow = wynik.data.kraje.map(kraj => kraj.nazwa);
+                ustawKrajeDoPojechania(listaKrajow);
+            } catch (blad) {
+                console.error("Błąd podczas pobierania krajów:", blad);
+            }
+        };
 
-    function show() {
-        setShowForm(!showForm);
+        pobierzKraje();
+        pobierzKrajeDoPojechania();
+    }, [osobaId]);
+
+    function pokaz() {
+        ustawPokazFormularz(!pokazFormularz);
     }
 
-    function addPerson(newPerson) {
-        setPeople(prevPeople => [...prevPeople, newPerson]);
+    function dodajOsobe(nowaOsoba) {
+        ustawOsoby(prevOsoby => [...prevOsoby, nowaOsoba]);
     }
 
-    function deletePerson(deletedPerson) {
-        setPeople(prevPeople => prevPeople.filter(person => person.person_id != deletedPerson.person_id))
+    function usunOsobe(usuwanaOsoba) {
+        ustawOsoby(prevOsoby => prevOsoby.filter(osoba => osoba.osoba_id !== usuwanaOsoba.osoba_id));
     }
 
-    return ( <div>
-        <h1>Travel Map</h1>
-        {people.map((person, index) => {
-            return <Person onDelete={deletePerson} fun={setId} key={index} id={person.person_id} name={person.name}/>
-        })}
-        {showForm ? <AddPerson onAdd={addPerson} fun={show}/> : <Fab onClick={show}><AddCircleOutlineIcon /></Fab>}
-        <MapChart countries={countries} person_id={person_id}/>
-        
-    </div> );
+    return (
+        <div>
+            <h1>Mapa Podróży</h1>
+            {osoby.map((osoba, indeks) => (
+                <Osoba onUsun={usunOsobe} fun={ustawOsobaId} key={indeks} id={osoba.osoba_id} imie={osoba.imie} />
+            ))}
+            {pokazFormularz ? <DodajOsobe onDodaj={dodajOsobe} fun={pokaz} /> : <Fab onClick={pokaz}><AddCircleOutlineIcon /></Fab>}
+            <Mapa kraje={kraje} osobaId={osobaId} krajeDoPojechania={krajeDoPojechania}/>
+            <Raporty />
+        </div>
+    );
 }
 
-export default App;
-
+export default Aplikacja;

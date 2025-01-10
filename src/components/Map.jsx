@@ -5,72 +5,146 @@ import axios from "axios";
 
 const geoUrl =
   "https://unpkg.com/world-atlas@2.0.2/countries-110m.json"
-const URL = "http://localhost:5000";
+const URL = "http://localhost:5050";
 
-export default function MapChart(props) {
+
+export default function Mapa(props) {
 
   const projection = geoCylindricalStereographic().scale(127);
-  const [clickedCountries, setClickedCountry] = useState(props.countries);
-  const [position, setPosition] = useState({ coordinates: [-36.091829614540046, -22.272618862363455], zoom: 1 });
+  const [kliknieteKraje, ustawKliknieteKraje] = useState(props.kraje);
+  const [krajeDoPojechania, ustawKrajeDoPojechania] = useState(props.krajeDoPojechania);
+  const [pozycja, ustawPozycje] = useState({ coordinates: [-36.091829614540046, -22.272618862363455], zoom: 1 });
+  const [liczba, ustawLiczbe] = useState(0)
+  const [nazwaKraju, ustawNazweKraju] = useState("");
+  let clickTimeout;
 
   useEffect(() => {
-    setClickedCountry(props.countries);
-  }, [props.countries]); 
+    ustawKliknieteKraje(props.kraje);
+  }, [props.kraje]);
 
-  const handleCountryClick = async (geo) => {
-    console.log(clickedCountries)
-    if(clickedCountries.includes(geo.properties.name)) {
-      setClickedCountry(prevCountries => {
-      let toRemove = prevCountries.find((key) => key === geo.properties.name);
-      return prevCountries.filter((key) => key != toRemove);
+  useEffect(() => {
+    ustawKrajeDoPojechania(props.krajeDoPojechania);
+  }, [props.krajeDoPojechania]);
+
+  const obsluzKlikniecieKraju = async (geo) => {
+    clearTimeout(clickTimeout);
+    clickTimeout = setTimeout(async () => {
+        if (kliknieteKraje.includes(geo.properties.name)) {
+        ustawKliknieteKraje(prevKraje => {
+            let doUsuniecia = prevKraje.find((key) => key === geo.properties.name);
+            return prevKraje.filter((key) => key !== doUsuniecia);
+        })
+        await axios.delete(URL + "/kraje", { data: { country: geo.properties.name, id: props.osobaId } });
+        }
+        else {
+        ustawKliknieteKraje(prevKraje => [...prevKraje, geo.properties.name]);
+        await axios.post(URL + "/kraje", { country: geo.properties.name, id: props.osobaId });
+        }
+        await pobierzLiczbe();
+    }, 300); // 300ms debounce
+  };
+
+  const obluzKrajeDoPojechania = async (geo) => {
+    console.log(krajeDoPojechania);
+    clearTimeout(clickTimeout); 
+    if (krajeDoPojechania.includes(geo.properties.name)) {
+      ustawKrajeDoPojechania(prevKraje => {
+        let doUsuniecia = prevKraje.find((key) => key === geo.properties.name);
+        return prevKraje.filter((key) => key !== doUsuniecia);
       })
-      await axios.delete(URL + "/countries", {data: {country: geo.properties.name, id: props.person_id}});
+      await axios.delete(URL + "/krajeDoPojechania", { data: { country: geo.properties.name, id: props.osobaId } });
     }
     else {
-      setClickedCountry(prevCountries => [...prevCountries, geo.properties.name])
-      await axios.post(URL + "/countries", {country: geo.properties.name, id: props.person_id})
+        ustawKrajeDoPojechania(prevKraje => [...prevKraje, geo.properties.name]);
+      await axios.post(URL + "/krajeDoPojechania", { country: geo.properties.name, id: props.osobaId });
+    }
+    await pobierzLiczbe();
+  };
+
+  function obsluzZakonczeniePrzemieszczania(pozycja) {
+    if (pozycja.zoom !== 1) ustawPozycje(pozycja);
+    else ustawPozycje({ coordinates: [0, 0], zoom: 1 });
+  }
+
+  useEffect(() => {
+    obsluzZakonczeniePrzemieszczania({ coordinates: [0, 0], zoom: 1 });
+  }, []);
+
+  const pobierzLiczbe = async () => {
+    const wynik = await axios.get(URL + "/liczba_krajow", {
+      params: {
+        id: props.osobaId,
+      }
+    })
+    ustawLiczbe(wynik.data.liczba);
+  }
+
+  useEffect(() => {
+    
+    pobierzLiczbe();
+  }, [kliknieteKraje]);
+
+  const obsluzPrzeslanieFormularza = async (e) => {
+    e.preventDefault();
+    try {
+      let kraj = nazwaKraju;
+      kraj = kraj.toLowerCase();
+      kraj = kraj.charAt(0).toUpperCase() + kraj.slice(1);
+      await axios.post(URL + "/kraje", { country: kraj, id: props.osobaId });
+      ustawKliknieteKraje(prevKraje => [...prevKraje, kraj]);
+      ustawNazweKraju("");
+    } catch (blad) {
+      console.error("Błąd podczas przesyłania formularza:", blad);
     }
   };
 
-    function handleMoveEnd(position) {
-      if(position.zoom !== 1) setPosition(position);
-      else setPosition({ coordinates: [0, 0], zoom: 1 })
-    }
-
-    useEffect(() => {
-      handleMoveEnd({ coordinates: [0, 0], zoom: 1 });
-    }, []);
-
   return (
-    <ComposableMap projection={projection} className="map">
-          <ZoomableGroup
-          zoom={position.zoom}
-          center={position.coordinates}
-          onMoveEnd={handleMoveEnd}> 
-          
-      <Geographies geography={geoUrl}>
-        {({ geographies }) =>
-          geographies.map((geo) => (
-            <Geography 
-            key={geo.rsmKey} 
-            geography={geo} 
-            onClick={() => handleCountryClick(geo)}
-            stroke="#AAD9BB"
-            style={{
-              default: {
-                fill: clickedCountries.includes(geo.properties.name) ? "#D5F0C1" : "#F9F7C9",
-                outline: "none"
-              },
-              hover: {
-                fill:  "#D5F0C1",
-                outline: "none"
-              },
-            }}
-             />
-          ))
-        }
-      </Geographies>
-      </ZoomableGroup>
-    </ComposableMap>
-  )
+    <div>
+      <p>liczba: {liczba}</p>
+      <form onSubmit={obsluzPrzeslanieFormularza}>
+        <label htmlFor="nazwa_kraju">Nazwa Kraju:</label>
+        <input
+          type="text"
+          id="nazwa_kraju"
+          name="nazwa_kraju"
+          value={nazwaKraju}
+          onChange={(e) => ustawNazweKraju(e.target.value)}
+          required
+        />
+        <button type="submit">Wyślij</button>
+      </form>
+      <ComposableMap projection={projection} className="map">
+        {/* <ZoomableGroup
+          zoom={pozycja.zoom}
+          center={pozycja.coordinates}
+          onMoveEnd={obsluzZakonczeniePrzemieszczania}
+          >  */}
+
+          <Geographies geography={geoUrl}>
+            {({ geographies }) =>
+              geographies.map((geo) => (
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  onClick={() => obsluzKlikniecieKraju(geo)}
+                  onDoubleClick={() => obluzKrajeDoPojechania(geo)}
+                  stroke="#AAD9BB"
+                  style={{
+                    default: {
+                      fill: kliknieteKraje.includes(geo.properties.name) ? "#D5F0C1" : krajeDoPojechania.includes(geo.properties.name) ? "#2E5077" : "#F9F7C9",
+                      outline: "none"
+                    },
+                    hover: {
+                      fill: "#D5F0C1",
+                      outline: "none"
+                    },
+                  }}
+                />
+              ))
+            }
+          </Geographies>
+        {/* </ZoomableGroup> */}
+      </ComposableMap>
+    </div>
+  );
 }
